@@ -155,7 +155,7 @@ fun Lista(navController: NavController) {
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         // Total
         val total = productos.value.sumOf { it.precio * it.cantidad }
@@ -164,7 +164,9 @@ fun Lista(navController: NavController) {
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
             color = Color(0xFFDE0B38),
-            modifier = Modifier.align(Alignment.CenterHorizontally)
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .padding(bottom = 40.dp)
         )
     }
 }
