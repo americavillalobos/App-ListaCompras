@@ -11,13 +11,38 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.listaapp.data.Producto
+import com.example.listaapp.ui.theme.ProductoViewModel
+
+import kotlinx.coroutines.launch
 
 @Composable
-fun AddScreen(navController: NavController) {
+fun AddScreen(
+    navController: NavController,
+    productoId: Int = 0,
+    productoViewModel: ProductoViewModel = viewModel()
+
+) {
+
+
     var nombre by remember { mutableStateOf("") }
     var cantidad by remember { mutableStateOf("") }
     var precio by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(productoId) {
+        if (productoId != 0) {
+            productoViewModel.obtenerProductoPorId(productoId).collect { producto ->
+                producto?.let {
+                    nombre = it.nombre
+                    cantidad = it.cantidad.toString()
+                    precio = it.precio.toString()
+                }
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -32,11 +57,12 @@ fun AddScreen(navController: NavController) {
                 Icon(
                     painter = painterResource(id = R.drawable.flecha),
                     contentDescription = "Volver",
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier.size(48.dp),
+                    tint = Color(0xFF0C3619)
                 )
             }
             Text(
-                text = "Agregar Producto",
+                text = if (productoId == 0) "Agregar Producto" else "Editar Producto",
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
                 color = Color(0xFF0C3619)
@@ -53,28 +79,23 @@ fun AddScreen(navController: NavController) {
             modifier = Modifier.fillMaxWidth()
         )
 
-
-
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(text = "Cantidad", fontSize = 16.sp, color = Color.Black)
         OutlinedTextField(
-            value = nombre,
-            onValueChange = { nombre = it },
+            value = cantidad,
+            onValueChange = { cantidad = it },
             modifier = Modifier.fillMaxWidth()
         )
-
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(text = "Precio aprox", fontSize = 16.sp, color = Color.Black)
         OutlinedTextField(
-            value = nombre,
-            onValueChange = { nombre = it },
+            value = precio,
+            onValueChange = { precio = it },
             modifier = Modifier.fillMaxWidth()
         )
-
-
 
         Spacer(modifier = Modifier.height(32.dp))
 
@@ -83,8 +104,29 @@ fun AddScreen(navController: NavController) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            Button(
-                onClick = { /* acción guardar */ },
+            Button(onClick = {
+                val cantidadInt = cantidad.toIntOrNull() ?: 0
+                val precioDouble = precio.toDoubleOrNull() ?: 0.0
+                if (nombre.isNotBlank() && cantidadInt > 0 && precioDouble > 0) {
+                    val producto = Producto(
+                        id = if (productoId != 0) productoId else 0,
+                        nombre = nombre,
+                        cantidad = cantidadInt,
+                        precio = precioDouble
+                    )
+                    scope.launch {
+                        if (productoId != 0) {
+                            productoViewModel.actualizar(producto)
+                        } else {
+                            productoViewModel.insertar(producto)
+                        }
+                    }
+                    navController.popBackStack()
+
+                    } else {
+                        // Aquí puedes mostrar un mensaje de error si quieres
+                    }
+                },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0C3619))
             ) {
                 Icon(
@@ -97,7 +139,11 @@ fun AddScreen(navController: NavController) {
             }
 
             OutlinedButton(
-                onClick = { /* acción eliminar */ }
+                onClick = {
+                    nombre = ""
+                    cantidad = ""
+                    precio = ""
+                }
             ) {
                 Icon(
                     painter = painterResource(id = R.drawable.lata_de_reciclaje),

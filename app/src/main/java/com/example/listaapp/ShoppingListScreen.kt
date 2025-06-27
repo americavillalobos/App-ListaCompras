@@ -1,5 +1,6 @@
 package com.example.listaapp
 
+import android.app.Application
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,26 +18,27 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.listaapp.ui.theme.ProductoViewModel
+import com.example.listaapp.ui.theme.ProductoViewModelFactory
 
 @Composable
 fun Lista(navController: NavController) {
-    val items = remember {
-        mutableStateListOf(
-            ShoppingItem("Queso"),
-            ShoppingItem("Pan"),
-            ShoppingItem("Leche")
-        )
-    }
+    val context = LocalContext.current.applicationContext as Application
+    val productoViewModel: ProductoViewModel = viewModel(
+        factory = ProductoViewModelFactory(context)
+    )
+    val productos = productoViewModel.productos.collectAsState(initial = emptyList())
 
     Column(
         modifier = Modifier
@@ -84,9 +86,9 @@ fun Lista(navController: NavController) {
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Lista de productos
+        // Lista de productos reales
         Column(modifier = Modifier.weight(1f)) {
-            items.forEach { item ->
+            productos.value.forEach { producto ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -94,23 +96,38 @@ fun Lista(navController: NavController) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = item.name,
+                        text = producto.nombre,
                         fontSize = 18.sp,
                         color = Color.Black,
                         modifier = Modifier.weight(1f)
                     )
-                    Text(text = "1x", color = Color.Black)
+                    Text(text = "${producto.cantidad}x", color = Color.Black)
+
+                    // ✅ Checkbox funcional para marcar como comprado
                     Checkbox(
-                        checked = item.checked,
-                        onCheckedChange = { item.checked = it }
+                        checked = producto.comprado,
+                        onCheckedChange = { checked ->
+                            // Al marcarlo, se actualiza y se ocultará de la lista
+                            val actualizado = producto.copy(comprado = checked)
+                            productoViewModel.actualizar(actualizado)
+                        }
                     )
-                    IconButton(onClick = { /* editar */ }) {
+
+                    // Botón editar
+                    IconButton(onClick = {
+                        navController.navigate("edit/${producto.id}")
+
+                    }) {
                         Icon(
                             painter = painterResource(id = R.drawable.lapiz_de_grafito),
                             contentDescription = "Editar"
                         )
                     }
-                    IconButton(onClick = { items.remove(item) }) {
+
+                    // Botón eliminar
+                    IconButton(onClick = {
+                        productoViewModel.eliminar(producto)
+                    }) {
                         Icon(
                             painter = painterResource(id = R.drawable.bote_de_basura),
                             contentDescription = "Eliminar"
@@ -121,8 +138,9 @@ fun Lista(navController: NavController) {
         }
 
         // Total
+        val total = productos.value.sumOf { it.precio * it.cantidad }
         Text(
-            text = "Total  = $",
+            text = "Total = $${"%.2f".format(total)}",
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
             color = Color(0xFFDE0B38),
@@ -131,7 +149,3 @@ fun Lista(navController: NavController) {
     }
 }
 
-data class ShoppingItem(
-    val name: String,
-    var checked: Boolean = false
-)
